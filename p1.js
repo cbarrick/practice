@@ -3,6 +3,8 @@
 var Set = require('collections/set');
 
 
+// Sum of the multiples of 3 and 5 less than 1000
+// ---
 // Solution: p1(3, 5, 1000) === 233168
 
 var p1 = module.exports = function (multiple1, multiple2, cap) {
