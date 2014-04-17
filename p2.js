@@ -3,9 +3,9 @@
 
 // Sum of the even Fibonacci numbers less than four million
 // Every third number is even.
-// Very fast: no floats, no exponents, no mods, and the loop takes only 11 iterations.
 // ---
-// Solution: p2(4000000) === 4613732
+// Solution: p2(4000000) === 4613732  --  11 iterations
+// Worst case: O(n)
 
 var p2 = module.exports = function (cap) {
 	var sum = 0;

@@ -5,7 +5,9 @@ var Set = require('collections/set');
 
 // Sum of the multiples of 3 and 5 less than 1000
 // ---
-// Solution: p1(3, 5, 1000) === 233168
+// Solution: p1(3, 5, 1000) === 233168  --  333 iterations
+// Average case: O(n)
+// Worst case: O(n*log(n)) [hash table lookup in a loop]
 
 var p1 = module.exports = function (multiple1, multiple2, cap) {
 	var a = multiple1;
