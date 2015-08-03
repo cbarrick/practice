@@ -91,7 +91,7 @@ langford_dfs(Order, String) :-
 	% validate arguments
 	between(1, inf, Order),
 	(0 =:= Order rem 4 ; 0 =:= (Order+1) rem 4),
-	Size is 2 * Order,
+	Size #= 2 * Order,
 	length(String, Size),
 
 	% cut if we're not generating
@@ -106,12 +106,12 @@ langford_dfs(Order, String) :-
 langford_dfs_(Order, [H|T], Seen) :-
 	between(1, Order, H),
 	\+ member(H, Seen),
-	Opposite is -H,
+	Opposite #= -H,
 	nth0(H, T, Opposite),
 	langford_dfs_(Order, T, [H|Seen]).
 langford_dfs_(Order, [H|T], Seen) :-
 	nonvar(H),
-	Opposite is -H,
+	Opposite #= -H,
 	member(Opposite, Seen),
 	langford_dfs_(Order, T, Seen).
 langford_dfs_(_, [], _).
@@ -139,14 +139,14 @@ langford_csp(Order, String, Options) :-
 	% validate arguments
 	between(1, inf, Order),
 	(0 =:= Order rem 4 ; 0 =:= (Order+1) rem 4),
-	L is 2 * Order,
+	L #= 2 * Order,
 	length(String, L),
 
 	% set the domain
 	% the list is encoded such that ±1=A, ±2=B, ...
 	% and +X occurs before -X
 	% and each value occurs exactly once
-	Min is -Order,
+	Min #= -Order,
 	String ins (Min)..(-1) \/ 1..Order,
 	all_distinct(String),
 
@@ -163,11 +163,11 @@ langford_csp(Order, String, Options) :-
 % Applies the Langford string constraint by delegating to `element/3`.
 langford_csp_v1_(Order, String) :-
 	Order > 0,
-	Opposite is -Order,
+	Opposite #= -Order,
 	element(A, String, Order),
 	element(B, String, Opposite),
 	B #= A + Order + 1,
-	Next is Order - 1,
+	Next #= Order - 1,
 	langford_csp_v1_(Next, String).
 
 langford_csp_v1_(0, _).
@@ -208,7 +208,7 @@ langford_csp_v2_(Val, Prev, [X|Next]) :-
 
 langford_csp_v2_(Val, Prev, []) :-
 	Val > 0,
-	NextOrder is Val - 1,
+	NextOrder #= Val - 1,
 	reverse(Prev, String),
 	langford_csp_v2_(NextOrder, [], String).
 
