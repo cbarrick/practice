@@ -176,7 +176,7 @@ langford_csp_v1_(0, _).
 %! langford_csp_v2_(+Order, ?String)
 % Applies the Langford string constraint by enumerating implications.
 % This results in a faster search than delegating to `element/3`.
-langford_csp_v2_(Order, String) :- langford_csp_v2_(Val, [], String).
+langford_csp_v2_(Order, String) :- langford_csp_v2_(Order, [], String).
 langford_csp_v2_(Val, Prev, [X|Next]) :-
 	Val > 0,
 
