@@ -26,9 +26,7 @@ main :-
 	prompt1(''),
 	read_line_to_codes(current_input, MainLine),
 	(
-		phrase(integer(X), MainLine, MainLine_),
-		phrase(blank, MainLine_, MainLine__),
-		phrase(integer(Y), MainLine__),
+		phrase((integer(X), blank, integet(Y)), MainLine),
 		OutputType = step
 	->true;
 		phrase(integer(Step), MainLine),
@@ -38,8 +36,8 @@ main :-
 	% convert input to match implementation
 	% (rotate and translate coordinates, offset step)
 	Step_ #= Step - 1,
-	X_ #= Y - Size/2 - 1,
-	Y_ #= X - Size/2 - 1,
+	X_ #= Y - Size//2 - 1,
+	Y_ #= X - Size//2 - 1,
 
 	% do it
 	square_spiral(Step_, [X_,Y_]),
@@ -80,10 +78,10 @@ square_spiral(Step, [X,Y]) :-
 	% correlate Step and Side
 	LvlSize #= StepMax - StepMin + 1, % number of steps in the Level
 	LvlStep #= Step - StepMin, % Step relative to the start of the Level
-	(Side #= 0 #/\ 0 #=< LvlStep #/\ LvlStep #< LvlSize * 1/4) #\
-	(Side #= 1 #/\ LvlSize * 1/4 #=< LvlStep #/\ LvlStep #< LvlSize * 2/4) #\
-	(Side #= 2 #/\ LvlSize * 2/4 #=< LvlStep #/\ LvlStep #< LvlSize * 3/4) #\
-	(Side #= 3 #/\ LvlSize * 3/4 #=< LvlStep #/\ LvlStep #< LvlSize),
+	(Side #= 0 #/\ 0 #=< LvlStep #/\ LvlStep #< LvlSize * 1//4) #\
+	(Side #= 1 #/\ LvlSize * 1//4 #=< LvlStep #/\ LvlStep #< LvlSize * 2//4) #\
+	(Side #= 2 #/\ LvlSize * 2//4 #=< LvlStep #/\ LvlStep #< LvlSize * 3//4) #\
+	(Side #= 3 #/\ LvlSize * 3//4 #=< LvlStep #/\ LvlStep #< LvlSize),
 
 	% correlate X, Y, and Side
 	(Side #= 0 #/\ Y #= CoordMax #/\ CoordMin #=< X #/\ X #< CoordMax) #\
@@ -92,7 +90,7 @@ square_spiral(Step, [X,Y]) :-
 	(Side #= 3 #/\ X #= CoordMax #/\ CoordMin #< Y #/\ Y #=< CoordMax),
 
 	% correlate X, Y, and Step
-	SideSize #= LvlSize / 4, % number of steps on the Side
+	SideSize #= LvlSize // 4, % number of steps on the Side
 	SideStep #= LvlStep - Side * SideSize, % LvlStep relative to the start of the Side
 	(Side #= 0 #/\ X #= CoordMax - SideStep - 1) #\
 	(Side #= 1 #/\ Y #= CoordMax - SideStep - 1) #\
