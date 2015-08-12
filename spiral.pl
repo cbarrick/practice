@@ -49,7 +49,7 @@ main :-
 %! square_spiral(?N, ?Point)
 % True when Point is the [X,Y] coordinate of the Nth step along a square spiral
 % centered at [0,0]. The first step of the spiral is upwards, i.e.
-% `square_spiral(0, [0,0])` and `square_spiral(1, [0,1])` are both true.
+% `square_spiral(0, [0,0])` and `square_spiral(1, [0,1])`.
 square_spiral(0, [0,0]).
 square_spiral(Step, [X,Y]) :-
 	% initial bounds
@@ -78,10 +78,10 @@ square_spiral(Step, [X,Y]) :-
 	% correlate Step and Side
 	LvlSize #= StepMax - StepMin + 1, % number of steps in the Level
 	LvlStep #= Step - StepMin, % Step relative to the start of the Level
-	(Side #= 0 #/\ 0 #=< LvlStep #/\ LvlStep #< LvlSize * 1//4) #\
-	(Side #= 1 #/\ LvlSize * 1//4 #=< LvlStep #/\ LvlStep #< LvlSize * 2//4) #\
-	(Side #= 2 #/\ LvlSize * 2//4 #=< LvlStep #/\ LvlStep #< LvlSize * 3//4) #\
-	(Side #= 3 #/\ LvlSize * 3//4 #=< LvlStep #/\ LvlStep #< LvlSize),
+	(Side #= 0 #/\ 0 #=< LvlStep #/\ LvlStep #< LvlSize * 1/4) #\
+	(Side #= 1 #/\ LvlSize * 1/4 #=< LvlStep #/\ LvlStep #< LvlSize * 2/4) #\
+	(Side #= 2 #/\ LvlSize * 2/4 #=< LvlStep #/\ LvlStep #< LvlSize * 3/4) #\
+	(Side #= 3 #/\ LvlSize * 3/4 #=< LvlStep #/\ LvlStep #< LvlSize),
 
 	% correlate X, Y, and Side
 	(Side #= 0 #/\ Y #= CoordMax #/\ CoordMin #=< X #/\ X #< CoordMax) #\
