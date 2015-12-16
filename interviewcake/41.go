@@ -5,23 +5,23 @@ import (
 	"math/rand"
 )
 
-const n = 31
-
 func main() {
-	for i := int64(0); i < 10; i++ {
+	for i := int64(0); i < 256; i++ {
 		rand.Seed(i)
 
 		// setup the problem:
-		var ints [n + 1]int
-		copy(ints[:], rand.Perm(n))
-		dupe := ints[rand.Intn(n)]
-		ints[n] = dupe
+		const n = 63
+		var ints = make([]int, n+1)
+		copy(ints[:n], rand.Perm(n))
+		dup := rand.Intn(n)
 		i := rand.Intn(n)
+		ints[n] = dup
 		ints[i], ints[n] = ints[n], ints[i]
 
-		// test the implementation
-		if findDup(ints) != dupe {
-			panic("It doesn't work :(")
+		// test the implementation:
+		if findDup(ints) != dup {
+			fmt.Println("It doesn't work :(")
+			panic("failed")
 		}
 	}
 	fmt.Println("It works!")
@@ -29,22 +29,31 @@ func main() {
 
 // FindDup finds the duplicate in a slice of size n+1 containing a permutation
 // of [0,n) and one diplicate. It does this in linear time and constant space.
-func findDup(ints [n + 1]int) (dup int) {
-	var i, last int
+func findDup(ints []int) (dup int) {
+	var start, end, cycle int
+
+	start = len(ints) - 1
+	for _ = range ints {
+		start = ints[start]
+	}
+	end = ints[start]
+	cycle++
 	for {
-		switch {
-		case ints[i] == i:
-			last = ints[i]
-			i++
-			continue
-
-		case ints[i] == last:
-			return last
-
-		default:
-			last = ints[i]
-			ints[i], ints[ints[i]] = ints[ints[i]], ints[i]
-			continue
+		end = ints[end]
+		cycle++
+		if start == end {
+			break
 		}
 	}
+
+	start = len(ints) - 1
+	end = start
+	for i := 0; i < cycle; i++ {
+		end = ints[end]
+	}
+	for start != end {
+		start = ints[start]
+		end = ints[end]
+	}
+	return start
 }
