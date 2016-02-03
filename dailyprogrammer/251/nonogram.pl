@@ -41,15 +41,9 @@ solve(Spec, Ans) :-
 % True when Matrix is a nonogram given by the constraints.
 
 nonogram(cons(Cols, Rows), Grid) :-
-	( nonvar(Grid) ->
-		matrix(N, M, Grid),
-		length(Rows, N),
-		length(Cols, M)
-	;
-		length(Cols, M),
-		length(Rows, N),
-		matrix(N, M, Grid)
-	),
+	matrix(N, M, Grid),
+	length(Cols, M),
+	length(Rows, N),
 	nonogram_(Rows, Grid),
 	transpose(Grid, Trans),
 	nonogram_(Cols, Trans),
@@ -57,15 +51,70 @@ nonogram(cons(Cols, Rows), Grid) :-
 	label(Vars).
 
 nonogram_([], []).
-nonogram_([Spec|T], [Row|Grid]) :-
-	nonvar(Spec), !,
-	findall(Row, phrase(con_codes(Spec), Row), Rows),
-	tuples_in([Row], Rows),
-	nonogram_(T, Grid).
-nonogram_([Spec|T], [Row|Grid]) :-
-	nonvar(Row), !,
-	phrase(con_codes(Spec), Row),
-	nonogram_(T, Grid).
+nonogram_([Runs|Next], [Row|Rows]) :-
+	Row = [X|_],
+	(nonvar(X) ->
+		phrase(row(Runs), Row)
+	;
+		runs_arcs(Runs, Arcs),
+		automaton(Row, [source(start),sink((1,0))], Arcs)
+	),
+	nonogram_(Next, Rows).
+
+
+%% runs_arcs(+Runs, -Arcs)
+% Construct the arcs of an automaton that accepts the rows described by the
+% constraint runs. The start state is `start` and the accept state is `(1,0)`.
+
+runs_arcs(Runs, Arcs) :-
+	Runs = [run(X,Len)|_],
+	Len0 #= Len - 1,
+	length(Runs, N),
+	Arcs = [arc(start,32,start),arc(start,X,(N,Len0))|Rest],
+	runs_arcs(Runs, Rest, N).
+
+runs_arcs([run(A,ALen),run(B,BLen)|Runs], Arcs, N) :-
+	A #\= B,
+	BLen0 #= BLen - 1,
+	N0 #= N - 1,
+	findall(Arc, (
+		Arc = arc((N,Count),A,(N,Count0)),
+		between(1,ALen,Count),
+		Count0 #= Count - 1
+	;
+		member(Arc, [
+			arc((N,0),32,(N,0)),
+			arc((N,0),B,(N0,BLen0))])
+	), HeadArcs),
+	append(HeadArcs, TailArcs, Arcs),
+	runs_arcs([run(B,BLen)|Runs], TailArcs, N0).
+
+runs_arcs([run(X,ALen),run(X,BLen)|Runs], Arcs, N) :-
+	BLen0 #= BLen - 1,
+	N0 #= N - 1,
+	findall(Arc, (
+		Arc = arc((N,Count),X,(N,Count0)),
+		between(1,ALen,Count),
+		Count0 #= Count - 1
+	;
+		member(Arc, [
+			arc((N,0),32,(N,space)),
+			arc((N,space),32,(N,space)),
+			arc((N,space),X,(N0,BLen0))])
+	), HeadArcs),
+	append(HeadArcs, TailArcs, Arcs),
+	runs_arcs([run(X,BLen)|Runs], TailArcs, N0).
+
+runs_arcs([run(X,Len)], Arcs, N) :-
+	findall(Arc, (
+		Arc = arc((N,Count),X,(N,Count0)),
+		between(1,Len,Count),
+		Count0 #= Count - 1
+	;
+		Arc = arc((N,0),32,(N,0))
+	), Arcs).
+
+run_arcs([], [], _).
 
 
 %% spec_cons(?Constraints)//
@@ -76,11 +125,7 @@ spec_cons(cons(Cols, Rows)) -->
 	spec_cons__rows(Rows).
 
 spec_cons__constraint([run(Char,Len)|T], T) -->
-	"(",
-	[Char],
-	",",
-	integer(Len),
-	")".
+	"(", [Char], ",", integer(Len), ")".
 spec_cons__constraint(X, X) --> "     ".
 
 spec_cons__cols(Cols) -->
@@ -118,33 +163,33 @@ spec_cons__rows_([Con|Rows]) -->
 	).
 
 
-%% con_codes(?Constraints)//
+%% row(?Runs)//
 % Grammar to parse/generate vectors adheraring to nonogram constraints.
 
-con_codes([]) --> [].
-con_codes([run(A,ALen),run(B,BLen)|T]) -->
+row([]) --> [].
+row([run(A,ALen),run(B,BLen)|T]) -->
 	{ A #\= B },
 	{ A #\= 32, B #\= 32 },
-	con_codes_(run(A,ALen), 0),
-	con_codes([run(B,BLen)|T]).
-con_codes([run(Char,ALen),run(Char,BLen)|T]) -->
+	row_(run(A,ALen), 0),
+	row([run(B,BLen)|T]).
+row([run(Char,ALen),run(Char,BLen)|T]) -->
 	{ Char #\= 32 },
-	con_codes_(run(Char,ALen), 0),
+	row_(run(Char,ALen), 0),
 	" ",
-	con_codes([run(Char,BLen)|T]).
-con_codes([run(Char,Len)]) -->
+	row([run(Char,BLen)|T]).
+row([run(Char,Len)]) -->
 	{ Char #\= 32 },
-	con_codes_(run(Char,Len), 0),
-	con_codes([]).
-con_codes(Row) --> " ", con_codes(Row).
+	row_(run(Char,Len), 0),
+	row([]).
+row(Row) --> " ", row(Row).
 
-con_codes_(run(Char,Len), Count) --> [Char],
+row_(run(Char,Len), Count) --> [Char],
 	{
 		Count #< Len,
 		Count1 #= Count + 1
 	},
-	con_codes_(run(Char,Len), Count1).
-con_codes_(run(_,Len), Len) --> { Len #\= 0 }.
+	row_(run(Char,Len), Count1).
+row_(run(_,Len), Len) --> { Len #\= 0 }.
 
 
 %% select_at(+N, ?X, ?XList, ?Y, ?YList)
@@ -168,13 +213,31 @@ all_empty([[]|T]) :- all_empty(T).
 %% matrix(?N, ?M, ?Matrix)
 % True when Matrix is an N by M matrix.
 
-matrix(N, M, Grid) :-
-	length(Grid, N),
-	matrix_(M, Grid).
-	matrix_(_, []).
-matrix_(M, [H|T]) :-
+matrix(N, M, [H|T]) :-
+	bfs([N, M]),
+	length([H|T], N),
 	length(H, M),
-	matrix_(M, T).
+	maplist(same_length(H), T).
+
+
+%% bfs(+Vars)
+%% bfs(+Vars, +Max)
+% Searches integer variables in a breadth-first order.
+%
+% Vars is a list of integers between Min and Max. The values are initially
+% unified to 0 and increase upon backtracking such that every combination is
+% searched. The shorthand `bfs(Vars)` is equivalent to `bfs(Vars, 0, inf)`.
+
+bfs(Vars) :- bfs(Vars, 0, inf).
+bfs(Vars, Min, Max) :-
+	between(Min, Max, X),
+	(
+		maplist(=(X), Vars)
+	;
+		member(X, Vars),
+		maplist(between(Min, X), Vars),
+		\+ maplist(=(X), Vars)
+	).
 
 
 %% join(?Lines, ?Str, ?Char)
