@@ -27,11 +27,11 @@ main:-
 generate(Spec, Ans) :-
 	join(Matrix, Ans, 10),
 	nonogram(Cons, Matrix),
-	phrase(spec_cons(Cons), Spec, []),
+	phrase(spec_cons(Cons), Spec),
 	!.
 
 solve(Spec, Ans) :-
-	phrase(spec_cons(Cons), Spec, []),
+	phrase(spec_cons(Cons), Spec),
 	!,
 	nonogram(Cons, Matrix),
 	join(Matrix, Ans, 10).
@@ -59,12 +59,12 @@ nonogram(cons(Cols, Rows), Grid) :-
 nonogram_([], []).
 nonogram_([Spec|T], [Row|Grid]) :-
 	nonvar(Spec), !,
-	findall(Row, phrase(con_codes(Spec), Row, []), Rows),
+	findall(Row, phrase(con_codes(Spec), Row), Rows),
 	tuples_in([Row], Rows),
 	nonogram_(T, Grid).
 nonogram_([Spec|T], [Row|Grid]) :-
 	nonvar(Row), !,
-	phrase(con_codes(Spec), Row, []),
+	phrase(con_codes(Spec), Row),
 	nonogram_(T, Grid).
 
 
