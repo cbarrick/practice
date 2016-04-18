@@ -1,0 +1,27 @@
+%% island(-X, -Y, -Degree)
+% These are island constraints for a bridges puzzle.
+% See https://en.wikipedia.org/wiki/Hashiwokakero
+island(0,0,3).
+island(0,2,3).
+island(0,3,2).
+island(0,4,1).
+island(0,6,2).
+island(1,4,1).
+island(1,6,3).
+island(2,1,2).
+island(2,2,3).
+island(3,0,3).
+island(3,3,8).
+island(3,6,4).
+island(4,0,1).
+island(4,4,1).
+island(5,1,3).
+island(5,3,5).
+island(5,4,3).
+island(5,6,2).
+island(6,0,2).
+island(6,1,4).
+island(6,2,1).
+island(6,3,2).
+island(6,4,3).
+island(6,5,2).

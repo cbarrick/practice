@@ -1,0 +1,27 @@
+%% island(-X, -Y, -Degree)
+% These are island constraints for a bridges puzzle.
+% See http://www.puzzle-bridges.com/specfic.php
+% - 10x10 Bridges Easy
+% - ID: 4,276,720
+island(0, 0, 3).
+island(0, 6, 3).
+island(0, 8, 2).
+island(2, 0, 5).
+island(2, 5, 5).
+island(2, 7, 4).
+island(2, 9, 1).
+island(4, 0, 3).
+island(4, 3, 3).
+island(4, 7, 2).
+island(5, 6, 2).
+island(5, 8, 3).
+island(6, 0, 2).
+island(6, 3, 3).
+island(7, 1, 4).
+island(7, 5, 5).
+island(7, 9, 4).
+island(8, 0, 1).
+island(9, 1, 4).
+island(9, 4, 4).
+island(9, 6, 4).
+island(9, 9, 3).
