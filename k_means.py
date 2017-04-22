@@ -1,3 +1,4 @@
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy as sp
@@ -20,7 +21,7 @@ class KMeans(sk.base.BaseEstimator, sk.base.ClusterMixin, sk.base.ClassifierMixi
     '''
 
     def __init__(self, k):
-        self.k = 15
+        self.k = k
         self.clusters_ = None
         self.labels_ = None
 
@@ -74,6 +75,7 @@ class KMeans(sk.base.BaseEstimator, sk.base.ClusterMixin, sk.base.ClassifierMixi
 
         Args:
             X (ndarray): The data points to fit.
+            Y (ndarray): Optional labels.
             max_iter (int): The maximum number of updates.
             **kwargs: Passed to `np.allclose` to determine convergence.
 
@@ -179,41 +181,31 @@ class KMeans(sk.base.BaseEstimator, sk.base.ClusterMixin, sk.base.ClassifierMixi
 
 
 if __name__ == '__main__':
-    # seed numpy for consistent results
-    np.random.seed(1337)
+    # Load MNIST dataset
+    # --------------------------------------------------
+    # This code uses Scikit-Learn's `fetch_mldata` function to download the
+    # dataset from mldata.org. Unfortunately, mldata.ord is down (permanently?)
+    # and is not servicing requests. Thus this code will only work if the file
+    # `mnist-original.mat` has been previously downloaded and placed in the
+    # `data_home` directory at `{data_home}/mldata/mnist-original.mat`.
 
-    # load mnist data
-    # Since mldata.org is down (permanently?), you must manually download `mnist-original.mat`
     split = 60000
-    mnist = sk.datasets.fetch_mldata('MNIST original')
+    mnist = sk.datasets.fetch_mldata('MNIST original', data_home='.')
     X_train, Y_train = mnist.data[:split], mnist.target[:split]
     X_test, Y_test = mnist.data[split:], mnist.target[split:]
-
-    # Cluster visualization and classification report
-    # --------------------------------------------------
-
-    # fit a model
-    km = KMeans(15)
-    km.fit(X_train, Y_train)
-
-    # visualize the cluster centroids
-    for i in range(km.k):
-        c = km.clusters_[i]
-        l = km.labels_[i]
-        plt.title(f'Cluster #{i} (label = {int(l)})')
-        plt.imshow(c.reshape(28, 28))
-        plt.show()
-
-    # print the scores
-    print(km.report(X_test, Y_test))
 
     # WCSS vs Iteration
     # --------------------------------------------------
 
-    km = KMeans(15)
-    for i in range(100):
+    np.random.seed(1337)
+    n_iters = 100
+    km = KMeans(25)
+    wcss_train = np.ndarray(n_iters)
+    for i in range(n_iters):
         km.partial_fit(X_train)
-        plt.plot(i, km.wcss(X_train), 'ro')
+        wcss_train[i] = km.wcss(X_train)
+
+    plt.plot(np.arange(n_iters) + 1, wcss_train, label='train')
     plt.title('Train WCSS vs Iteration')
     plt.xlabel('Iteration')
     plt.ylabel('Within-cluster sum of squares')
@@ -222,7 +214,8 @@ if __name__ == '__main__':
     # Accuracy vs K
     # --------------------------------------------------
 
-    for k in (5, 10, 15, 20, 25):
+    for k in (5, 10, 15, 20, 25, 30):
+        np.random.seed(1337)
         km = KMeans(k)
         converged = km.fit(X_train, Y_train)
         dot = 'bo' if converged else 'ro'
@@ -231,3 +224,27 @@ if __name__ == '__main__':
     plt.xlabel('Number of Clusters')
     plt.ylabel('Train Accuracy')
     plt.show()
+
+    # Cluster visualization and classification report
+    # --------------------------------------------------
+    # This section uses the most recent version of `km`,
+    # which should be the best model produced by the above accuracy trial.
+
+    # visualize the cluster centroids
+    n_plots = km.k
+    n_rows = int(np.sqrt(n_plots))
+    n_cols = n_plots // n_rows
+    if n_rows * n_cols < n_plots:
+        n_rows += 1
+    fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols, 2*n_rows))
+    for i in range(km.k):
+        c = km.clusters_[i]
+        l = km.labels_[i]
+        plt.subplot(n_rows, n_cols, i+1)
+        plt.title(f'#{i+1} ({int(l)})')
+        plt.imshow(c.reshape(28, 28))
+    plt.tight_layout()
+    plt.show()
+
+    # print the scores
+    print(km.report(X_test, Y_test))
