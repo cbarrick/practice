@@ -1,12 +1,11 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import scipy as sp
+import scipy.spatial.distance
+import scipy.stats
 import sklearn as sk
 import sklearn.datasets
 import sklearn.metrics
-import matplotlib.pyplot as plt
-
-from copy import *
-from statistics import mode
 
 
 class KMeans(sk.base.BaseEstimator, sk.base.ClusterMixin, sk.base.ClassifierMixin):
@@ -39,15 +38,12 @@ class KMeans(sk.base.BaseEstimator, sk.base.ClusterMixin, sk.base.ClassifierMixi
             An int vector of the same length as X,
             mapping each data point to a cluster index.
         '''
-        # TODO: is there a way to vectorize this?
-        assignments = np.zeros(len(X), dtype=int)
-        for i, x in enumerate(X):
-            distance = [np.linalg.norm(x - c) for c in self.clusters_]
-            closest = np.argmin(distance)
-            assignments[i] = closest
-        return assignments
+        C = self.clusters_
+        dist = sp.spatial.distance.cdist(X, C)
+        assn = np.argmin(dist, axis=-1)
+        return assn
 
-    def update(self, X, **kwargs):
+    def partial_fit(self, X, **kwargs):
         '''Perform a single iteration of k-means update.
 
         Args:
@@ -57,37 +53,21 @@ class KMeans(sk.base.BaseEstimator, sk.base.ClusterMixin, sk.base.ClassifierMixi
         Returns:
             Returns `True` if the model has converged, and `False` otherwise.
         '''
-        if self.clusters_ is None:
-            self.clusters_ = np.random.random((self.k, *X.shape[1:]))
+        cluster_shape = (self.k, *X.shape[1:])
+        if self.clusters_ is None: self.clusters_ = np.random.random(cluster_shape)
+        old = self.clusters_
+        new = np.ndarray(cluster_shape)
+
         assn = self.assign(X)
-        old_centers = copy(self.clusters_)
         for i in range(self.k):
             cluster = X[assn == i]
             if len(cluster) == 0:
-                self.clusters_[i] = np.random.random(X.shape[1:])
+                new[i] = np.random.random(X.shape[1:])
             else:
-                self.clusters_[i] = cluster.mean(axis=0)
-        return np.allclose(self.clusters_, old_centers, **kwargs)
+                new[i] = cluster.mean(axis=0)
+        self.clusters_ = new
 
-    def label(self, X, Y, assignments=None):
-        '''Labels to the clusters given a set of labeled points.
-
-        The label of a cluster is the most common label of points assigned
-        to that cluster.
-
-        Args:
-            X (ndarray):
-                The data points.
-            Y (ndarray):
-                The labels for each data point.
-            assignments (array of ints):
-                Maps each data point to a cluster.
-                The default maps each to the nearest cluster.
-        '''
-        assn = self.assign(X) if assignments is None else assignments
-        self.labels_ = np.zeros((self.k, *Y.shape[1:]))
-        for i in range(self.k):
-            self.labels_[i] = mode(Y[assn == i])
+        return np.allclose(new, old, **kwargs)
 
     def fit(self, X, Y=None, max_iter=100, **kwargs):
         '''Fit the model by performing some maximum number of updates.
@@ -103,11 +83,32 @@ class KMeans(sk.base.BaseEstimator, sk.base.ClusterMixin, sk.base.ClassifierMixi
         self.reset()
         converged = False
         for i in range(max_iter):
-            converged = self.update(X, **kwargs)
+            converged = self.partial_fit(X, **kwargs)
             if converged: break
         if Y is not None:
             self.label(X, Y)
         return converged
+
+    def label(self, X, Y, assignments=None):
+        '''Labels the clusters given a set of labeled points.
+
+        The label of a cluster is the mode of the individual labels occuring
+        within the cluster.
+
+        Args:
+            X (ndarray):
+                The data points.
+            Y (ndarray):
+                The labels for each data point.
+            assignments (array of ints):
+                Maps each data point to a cluster.
+                The default maps each to the nearest cluster.
+        '''
+        assn = self.assign(X) if assignments is None else assignments
+        self.labels_ = np.zeros((self.k, *Y.shape[1:]))
+        for i in range(self.k):
+            mode, _ = sp.stats.mode(Y[assn == i])
+            self.labels_[i] = mode[0]
 
     def predict(self, X):
         '''Predicts the values of X.
@@ -142,7 +143,7 @@ class KMeans(sk.base.BaseEstimator, sk.base.ClusterMixin, sk.base.ClassifierMixi
             score += np.linalg.norm(x - c)
         return score
 
-    def accuracy(self, X, Y, sample_weight=None):
+    def accuracy(self, X, Y, normalize=True, sample_weight=None):
         '''Computes the accuracy of the model.
 
         If the clusters are not yet labeled, then they are labeled according
@@ -151,7 +152,7 @@ class KMeans(sk.base.BaseEstimator, sk.base.ClusterMixin, sk.base.ClassifierMixi
         if self.labels_ is None:
             self.label(X, Y)
         pred = self.predict(X)
-        return sk.metrics.accuracy_score(Y, pred, sample_weight)
+        return sk.metrics.accuracy_score(Y, pred, normalize, sample_weight)
 
     def score(self, X, Y=None):
         '''Computes a measure of performance.
@@ -188,18 +189,45 @@ if __name__ == '__main__':
     X_train, Y_train = mnist.data[:split], mnist.target[:split]
     X_test, Y_test = mnist.data[split:], mnist.target[split:]
 
+    # Cluster visualization and classification report
+    # --------------------------------------------------
+
     # fit a model
     km = KMeans(15)
-    km.fit(X_train, Y_train, max_iter=20)
+    km.fit(X_train, Y_train)
 
     # visualize the cluster centroids
-    for c in km.clusters_:
+    for i in range(km.k):
+        c = km.clusters_[i]
+        l = km.labels_[i]
+        plt.title(f'Cluster #{i} (label = {int(l)})')
         plt.imshow(c.reshape(28, 28))
         plt.show()
 
-    # print the predicted labels to compare with the visualization
-    for l in km.labels_:
-        print(l)
-
     # print the scores
     print(km.report(X_test, Y_test))
+
+    # WCSS vs Iteration
+    # --------------------------------------------------
+
+    km = KMeans(15)
+    for i in range(100):
+        km.partial_fit(X_train)
+        plt.plot(i, km.wcss(X_train), 'ro')
+    plt.title('Train WCSS vs Iteration')
+    plt.xlabel('Iteration')
+    plt.ylabel('Within-cluster sum of squares')
+    plt.show()
+
+    # Accuracy vs K
+    # --------------------------------------------------
+
+    for k in (5, 10, 15, 20, 25):
+        km = KMeans(k)
+        converged = km.fit(X_train, Y_train)
+        dot = 'bo' if converged else 'ro'
+        plt.plot(k, km.accuracy(X_train, Y_train), dot)
+    plt.title('Train Accuracy vs Number of Clusters')
+    plt.xlabel('Number of Clusters')
+    plt.ylabel('Train Accuracy')
+    plt.show()
