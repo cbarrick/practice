@@ -37,10 +37,14 @@ cardinality(Vs, Cardinality) :-
 % --------------------------------------------------
 % BOARD
 
-%% board(Shape, Vals, Board)
+%% board(Shape, Board)
+%% board(Shape, Board, Vals)
 % Board is a 2D board of the given Shape. Vals is a 1D list of values
 % distributed on the board left-to-right, top-to-bottom.
-board(Shape, Vals, Board) :-
+board(Shape, Board) :-
+	board(Shape, Board, _Vals).
+
+board(Shape, Board, Vals) :-
 	Board = board(Shape, Vals),
 	Shape = [H, W],
 	Length #= H*W,
@@ -48,50 +52,8 @@ board(Shape, Vals, Board) :-
 	Vals ins 1..Length.
 
 
-%% sudoku(Board)
-% Board is a 9x9 board whose values constitute a valid standard sudoku.
-sudoku(Board) :-
-	Rows = [
-		[A1, A2, A3, A4, A5, A6, A7, A8, A9],
-		[B1, B2, B3, B4, B5, B6, B7, B8, B9],
-		[C1, C2, C3, C4, C5, C6, C7, C8, C9],
-		[D1, D2, D3, D4, D5, D6, D7, D8, D9],
-		[E1, E2, E3, E4, E5, E6, E7, E8, E9],
-		[F1, F2, F3, F4, F5, F6, F7, F8, F9],
-		[G1, G2, G3, G4, G5, G6, G7, G8, G9],
-		[H1, H2, H3, H4, H5, H6, H7, H8, H9],
-		[I1, I2, I3, I4, I5, I6, I7, I8, I9]
-	],
-
-	Blocks = [
-		[A1, A2, A3, B1, B2, B3, C1, C2, C3],
-		[A4, A5, A6, B4, B5, B6, C4, C5, C6],
-		[A7, A8, A9, B7, B8, B9, C7, C8, C9],
-		[D1, D2, D3, E1, E2, E3, F1, F2, F3],
-		[D4, D5, D6, E4, E5, E6, F4, F5, F6],
-		[D7, D8, D9, F7, F8, F9, E7, E8, E9],
-		[G1, G2, G3, H1, H2, H3, I1, I2, I3],
-		[G4, G5, G6, H4, H5, H6, I4, I5, I6],
-		[G7, G8, G9, I7, I8, I9, H7, H8, H9]
-	],
-
-	transpose(Rows, Cols),
-	maplist(all_distinct, Rows),
-	maplist(all_distinct, Cols),
-	maplist(all_distinct, Blocks),
-
-	append(Rows, Vals),
-	Vals ins 1..9,
-	global_cardinality(Vals, [1-9, 2-9, 3-9, 4-9, 5-9, 6-9, 7-9, 8-9, 9-9]),
-
-	Shape = [9, 9],
-	board(Shape, Vals, Board).
-
-
-%% board_element(Board, Element)
 %% board_element(Board, Element, Coords)
 % Coords are the coordinates of Element on a Board.
-board_element(Board, Element) :- board_element(Board, Element, _Coords).
 board_element(Board, Element, Coords) :-
 	Board = board(Shape, Values),
 	Shape = [H, W],
@@ -108,8 +70,62 @@ board_grid(Board, Grid) :-
 	Board = board(Shape, Vals),
 	Shape = [H, W],
 	length(Grid, H),
-	maplist([Row] >> length(Row, W), Grid),
+	maplist({W}/[Row] >> length(Row, W), Grid),
 	append(Grid, Vals).
+
+
+% --------------------------------------------------
+% SUDOKU
+
+%% sudoku(Board)
+% Board is a 9x9 board whose values constitute a valid standard sudoku.
+sudoku(Board) :-
+	Rows = [
+		[A1, A2, A3, A4, A5, A6, A7, A8, A9],
+		[B1, B2, B3, B4, B5, B6, B7, B8, B9],
+		[C1, C2, C3, C4, C5, C6, C7, C8, C9],
+		[D1, D2, D3, D4, D5, D6, D7, D8, D9],
+		[E1, E2, E3, E4, E5, E6, E7, E8, E9],
+		[F1, F2, F3, F4, F5, F6, F7, F8, F9],
+		[G1, G2, G3, G4, G5, G6, G7, G8, G9],
+		[H1, H2, H3, H4, H5, H6, H7, H8, H9],
+		[I1, I2, I3, I4, I5, I6, I7, I8, I9]
+	],
+
+	Cols = [
+		[A1, B1, C1, D1, E1, F1, G1, H1, I1],
+		[A2, B2, C2, D2, E2, F2, G2, H2, I2],
+		[A3, B3, C3, D3, E3, F3, G3, H3, I3],
+		[A4, B4, C4, D4, E4, F4, G4, H4, I4],
+		[A5, B5, C5, D5, E5, F5, G5, H5, I5],
+		[A6, B6, C6, D6, E6, F6, G6, H6, I6],
+		[A7, B7, C7, D7, E7, F7, G7, H7, I7],
+		[A8, B8, C8, D8, E8, F8, G8, H8, I8],
+		[A9, B9, C9, D9, E9, F9, G9, H9, I9]
+	],
+
+	Blocks = [
+		[A1, A2, A3, B1, B2, B3, C1, C2, C3],  % top-left
+		[A4, A5, A6, B4, B5, B6, C4, C5, C6],  % top-center
+		[A7, A8, A9, B7, B8, B9, C7, C8, C9],  % top-right
+		[D1, D2, D3, E1, E2, E3, F1, F2, F3],  % center-left
+		[D4, D5, D6, E4, E5, E6, F4, F5, F6],  % true center
+		[D7, D8, D9, F7, F8, F9, E7, E8, E9],  % center-right
+		[G1, G2, G3, H1, H2, H3, I1, I2, I3],  % bottom-left
+		[G4, G5, G6, H4, H5, H6, I4, I5, I6],  % bottom-center
+		[G7, G8, G9, I7, I8, I9, H7, H8, H9]   % bottom-right
+	],
+
+	append(Rows, Vals),
+	Vals ins 1..9,
+
+	maplist(all_distinct, Rows),
+	maplist(all_distinct, Cols),
+	maplist(all_distinct, Blocks),
+	global_cardinality(Vals, [1-9, 2-9, 3-9, 4-9, 5-9, 6-9, 7-9, 8-9, 9-9]),
+
+	Shape = [9, 9],
+	board(Shape, Board, Vals).
 
 
 % --------------------------------------------------
@@ -131,10 +147,8 @@ tour(Shape, Tour) :-
 	all_distinct(Nodes).
 
 
-%% tour_node(Tour, Node)
 %% tour_node(Tour, Node, Coords)
 % Coords is the coordinates of a Node belonging to a Tour.
-tour_node(Tour, Node) :- tour_node(Tour, Node, _Coords).
 tour_node(Tour, Node, Coords) :-
 	Tour = tour(Shape, _Nodes),
 	Shape = [H, W],
@@ -144,19 +158,12 @@ tour_node(Tour, Node, Coords) :-
 	Node #= (Y-1)*W + (X-1)*1 + 1.
 
 
-%% tour_nodes(Tour, NodeList)
-%% tour_nodes(Tour, NodeList, CoordList)
-% NodeList is the list of nodes in visitation order of the Tour.
-% CoordList is the list of [Y, X] coordinates of each node.
-tour_nodes(Tour, NodeList) :- tour_nodes(Tour, NodeList, _CoordList).
-tour_nodes(Tour, NodeList, CoordList) :-
-	Tour = tour(_Shape, NodeList),
-	tour_coords_(NodeList, CoordList, Tour).
-
-tour_coords_([], [], _Tour).
-tour_coords_([N|Nodes], [Coords|CoordList], Tour) :-
-	tour_node(Tour, N, Coords),
-	tour_coords_(Nodes, CoordList, Tour).
+%% tour_coords(Tour, Coords)
+% Coords is the list of coordinates of nodes in the Tour in visitation order.
+tour_coords(Tour, Coords) :-
+	Tour = tour(_Shape, Nodes),
+	same_length(Nodes, Coords),
+	maplist(tour_node(Tour), Nodes, Coords).
 
 
 %% tour_grid(Tour, Grid)
@@ -167,14 +174,13 @@ tour_grid(Tour, Grid) :-
 	length(Grid, H),
 	maplist({W}/[Row] >> length(Row, W), Grid),
 	append(Grid, Flat),
-	tour_grid_(Nodes, Tour, Flat).
+	tour_grid_(Nodes, Nodes, Flat).
 
-tour_grid_([], _Tour, _Flat).
-tour_grid_([N|Nodes], Tour, Flat) :-
-	Tour = tour(_Shape, AllNodes),
+tour_grid_([], _AllNodes, _Flat).
+tour_grid_([N|Nodes], AllNodes, Flat) :-
 	element(O, AllNodes, N),
 	element(N, Flat, O),
-	tour_grid_(Nodes, Tour, Flat).
+	tour_grid_(Nodes, AllNodes, Flat).
 
 
 %% tour_vals(Tour, Board, TourVals)
@@ -207,15 +213,16 @@ tour_vals_([N|Nodes], [V|TourVals], Tour, Board) :-
 %
 % See tour/2.
 knights_tour(Shape, Tour) :-
-	tour(Shape, Tour),
-	Tour = tour(Shape, Nodes),
-	knights_tour_(Nodes, Tour).
+	knights_tour(Shape, Tour, _Nodes).
 
-
-knights_tour_([_LastNode], _Tour) :- !.
-knights_tour_([Prev, Next|T], Tour) :-
-	Tour = tour(Shape, _Nodes),
+knights_tour(Shape, Tour, Nodes) :-
+	tour(Shape, Tour, Nodes),
 	Shape = [H, W],
+	knights_tour_(Nodes, Tour, H, W).
+
+
+knights_tour_([_LastNode], _Tour, _H, _W) :- !.
+knights_tour_([Prev, Next|T], Tour, H, W) :-
 	[Y0, Y1] ins 1..H,
 	[X0, X1] ins 1..W,
 	[DY, DX] ins -2 \/ -1 \/ +1 \/ +2,
@@ -224,31 +231,7 @@ knights_tour_([Prev, Next|T], Tour) :-
 	abs(DY) + abs(DX) #= 3,
 	tour_node(Tour, Prev, [Y0, X0]),
 	tour_node(Tour, Next, [Y1, X1]),
-	knights_tour_([Next|T], Tour).
-
-
-% --------------------------------------------------
-% CANNONICAL SOLUTIONS
-
-%% cannonical(Tour)
-%% cannonical(Tour, Alts)
-% Tour is a cannonical tour of the given Shape and Alts are alternates.
-cannonical(Tour) :- cannonical(Tour, _Alts).
-cannonical(Tour, Alts) :- tour(_Shape, Tour), findall(Alt, tour_alt(Tour, Alt), Alts).
-
-
-%% tour_alt(A, B)
-% Tours A and B are isomorphic, with A ordered before B.
-tour_alt(A, B) :-
-	tour(Shape, A),    tour(Shape, B),
-	tour_grid(A, Ag),  tour_grid(B, Bg),
-	tour_nodes(A, An), tour_nodes(B, Bn),
-	tour_alt_(Ag, Bg),
-	lex_chain([An, Bn]).
-
-tour_alt_(Ag, Bg) :- transpose(Ag, Bg).
-tour_alt_(Ag, Bg) :- reverse(Ag, Bg).
-tour_alt_(Ag, Bg) :- maplist(reverse, Ag, Bg).
+	knights_tour_([Next|T], Tour, H, W).
 
 
 % --------------------------------------------------
@@ -289,8 +272,8 @@ label_(X) :- label_([], X).
 %% label_optimal(Tour, Board, Score)
 %
 label_optimal(Tour, Board, Score) :-
-	score(Tour, Board, Digits, Score),
 	Tour = tour(_Shape, Nodes),
+	score(Tour, Board, Digits, Score),
 	label_optimal_(Nodes, Digits).
 
 label_optimal_([], []).
@@ -309,15 +292,16 @@ label_optimal_([N|Nodes], [D|Digits]) :-
 % Board is the sudoku board of the solution.
 % Score is the score of the Tour on the Board.
 known_soln(Name, Tour, Board, Score) :-
-	% Read and decode
 	known_soln_(Name, CoordList, Grid, Score),
+
 	tour([9,9], Tour),
-	tour_nodes(Tour, _NodeList, CoordList),
+	knights_tour([9,9], Tour),
+	tour_coords(Tour, CoordList),
+
+	board([9,9], Board),
+	sudoku(Board),
 	board_grid(Board, Grid),
 
-	% Verify
-	sudoku(Board),
-	knights_tour([9,9], Tour),
 	score(Tour, Board, _Digits, Score).
 
 known_soln_(
@@ -365,7 +349,7 @@ read_board(StreamOrFile, Board, Shape) :-
 	close(Stream).
 
 read_board_(Board, Stream, Shape) :-
-	Board = board(Shape, Vals),
+	board(Shape, Board, Vals),
 	Shape = [H, W],
 	phrase_from_stream(board_dcg(H, W, Rows), Stream),
 	append(Rows, Vals).
@@ -385,11 +369,9 @@ row_dcg(W, [V|Vals]) -->
 %% print_board(Board)
 % Prints the Board to the current output.
 print_board(Board) :-
-	Board = board(Shape, _Values),
-	Shape = [H, W],
-	forall(between(1, H, Y), (
-		forall(between(1, W, X), (
-			board_element(Board, [Y, V, X]),
+	board_grid(Board, Grid),
+	forall(member(Row, Grid), (
+		forall(member(V, Row), (
 			format('~|~t~w~4+', [V])
 		)),
 		nl
@@ -399,13 +381,10 @@ print_board(Board) :-
 %% print_tour(Tour)
 % Prints the Tour to the current output.
 print_tour(Tour) :-
-	Tour = tour(Shape, Nodes),
-	Shape = [H, W],
-	forall(between(1, H, Y), (
-		forall(between(1, W, X), (
-			tour_node(Tour, N, [Y, X]),
-			element(P, Nodes, N),
-			format('~|~t~w~4+', [P])
+	tour_grid(Tour, Grid),
+	forall(member(Row, Grid), (
+		forall(member(V, Row), (
+			format('~|~t~w~4+', [V])
 		)),
 		nl
 	)).
@@ -453,8 +432,7 @@ main(Options) :-
 		knights_tour(Shape, Tour)
 	;
 		sudoku(Board),
-		knights_tour([9,9], Tour),
-		cannonical(Tour)
+		knights_tour([9,9], Tour)
 	),
 
 	score(Tour, Board, Digits, Score),
