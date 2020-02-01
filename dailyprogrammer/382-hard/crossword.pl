@@ -385,7 +385,6 @@ label_crossword__setup(Pool, Ret, Die) :-
 %     Ret (channel): The channel for the workers to return solutions.
 %     Die (channel): The channel to signal that the workers should die.
 label_crossword__cleanup(Pool, Ret, Die) :-
-    write("cleanup\n"),
     thread_send_message(Die, die),
     thread_pool_join(Pool, exited(killed)),
     thread_pool_destroy(Pool),
