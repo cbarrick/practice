@@ -229,34 +229,23 @@ mapgrid(Goal, Grid) :-
 %         status of cells in the crossword.
 clue_grid(Xword, ClueGrid) :-
     matrix(Height, Width, Xword),
+    matrix(Height, Width, ClueGrid),
 
-    % HClueGrid is a binary grid for horizontal clues.
-    matrix(Height, Width, HClueGrid),
-    mapgrid({Xword, HClueGrid} / [Pos, Color] >> (
-        index_grid(Pos, HClueGrid, HClue),
+    mapgrid({Xword, ClueGrid} / [Pos, Color] >> (
+        index_grid(Pos, ClueGrid, Clue),
         index_grid_left(Pos, Xword, LeftColor),
+        index_grid_up(Pos, Xword, UpColor),
+
         Color #= 0 #==> HClue #= 0,
         LeftColor #= 1 #==> HClue #= 0,
-        LeftColor #= 0 #/\ Color #= 1 #<==> HClue #= 1
-    ), Xword),
+        LeftColor #= 0 #/\ Color #= 1 #<==> HClue #= 1,
 
-    % VClueGrid is a binary grid for vertical clues.
-    matrix(Height, Width, VClueGrid),
-    mapgrid({Xword, VClueGrid} / [Pos, Color] >> (
-        index_grid(Pos, VClueGrid, VClue),
-        index_grid_up(Pos, Xword, UpColor),
         Color #= 0 #==> VClue #= 0,
         UpColor #= 1 #==> VClue #= 0,
-        UpColor #= 0 #/\ Color #= 1 #<==> VClue #= 1
-    ), Xword),
+        UpColor #= 0 #/\ Color #= 1 #<==> VClue #= 1,
 
-    % ClueGrid is computed from HClueGrid and VClueGrid.
-    matrix(Height, Width, ClueGrid),
-    mapgrid({HClueGrid, VClueGrid} / [Pos, Clue] >> (
-        index_grid(Pos, HClueGrid, HClue),
-        index_grid(Pos, VClueGrid, VClue),
         Clue #= HClue + 2*VClue
-    ), ClueGrid).
+    ), Xword).
 
 
 %% clue_constraints(+Xword, ++HClueSet, ++VClueSet)
@@ -272,12 +261,11 @@ clue_grid(Xword, ClueGrid) :-
 clue_constraints(Xword, HClueSet, VClueSet) :-
     clue_grid(Xword, ClueGrid),
     append(ClueGrid, ClueFlat),
-    clue_constraints__make_dfa([0|HClueSet], [0|VClueSet], Arcs, Sink),
+    once(clue_constraints__make_dfa([0|HClueSet], [0|VClueSet], Arcs, Sink)),
     automaton(ClueFlat, [source([0,0]), sink(Sink)], Arcs).
 
 
 clue_constraints__make_dfa([H], [V], Arcs, [H,V]) :-
-    !,
     findall(arc([A,B], 0, [A,B]), (
         between(0, H, A),
         between(0, V, B)
@@ -285,29 +273,24 @@ clue_constraints__make_dfa([H], [V], Arcs, [H,V]) :-
 
 clue_constraints__make_dfa([HA,HB|HCS], [VA,VB|VCS], [Arc|Arcs], Sink) :-
     HB = VB,
-    !,
     Arc = arc([HA,VA], 3, [HB,VB]),
     clue_constraints__make_dfa([HB|HCS], [VB|VCS], Arcs, Sink).
 
 clue_constraints__make_dfa([HA,HB|HCS], [VA,VB|VCS], [Arc|Arcs], Sink) :-
     HB < VB,
-    !,
     Arc = arc([HA,VA], 1, [HB,VA]),
     clue_constraints__make_dfa([HB|HCS], [VA,VB|VCS], Arcs, Sink).
 
 clue_constraints__make_dfa([HA,HB|HCS], [VA,VB|VCS], [Arc|Arcs], Sink) :-
     HB > VB,
-    !,
     Arc = arc([HA,VA], 2, [HA,VB]),
     clue_constraints__make_dfa([HA,HB|HCS], [VB|VCS], Arcs, Sink).
 
 clue_constraints__make_dfa([HA,HB|HCS], [VA], [Arc|Arcs], Sink) :-
-    !,
     Arc = arc([HA,VA], 1, [HB,VA]),
     clue_constraints__make_dfa([HB|HCS], [VA], Arcs, Sink).
 
 clue_constraints__make_dfa([HA], [VA,VB|VCS], [Arc|Arcs], Sink) :-
-    !,
     Arc = arc([HA,VA], 2, [HA,VB]),
     clue_constraints__make_dfa([HA], [VB|VCS], Arcs, Sink).
 
@@ -322,19 +305,21 @@ parallelism(N) :-
     atom_string(NAtom, NStr),
     number_string(N, NStr),
     !.
+
 parallelism(4).
 
 
-%% thread_pool_join(+Pool, -Status)
+%% thread_pool_join(+Pool)
 % Join all threads in a pool.
+%
+% The exit status of the threads is ignored.
 %
 % Arguments:
 %     Pool (atom): The identifier of the thread pool.
-%     Status (any): The expected status of the threads, see `thread_join/2`.
-thread_pool_join(Pool, Status) :-
+thread_pool_join(Pool) :-
     repeat,
     thread_pool_property(Pool, members(Threads)),
-    maplist({Status} / [T] >> thread_join(T, Status), Threads),
+    maplist([T] >> thread_join(T, _), Threads),
     thread_pool_property(Pool, running(0)),
     !.
 
@@ -386,7 +371,7 @@ label_crossword__setup(Pool, Ret, Die) :-
 %     Die (channel): The channel to signal that the workers should die.
 label_crossword__cleanup(Pool, Ret, Die) :-
     thread_send_message(Die, die),
-    thread_pool_join(Pool, exited(killed)),
+    thread_pool_join(Pool),
     thread_pool_destroy(Pool),
     message_queue_destroy(Die),
     message_queue_destroy(Ret).
@@ -407,14 +392,11 @@ label_crossword__call(Xword, Pool, Ret, Die) :-
     Goal = label_crossword__worker(Vars, Pool, Ret, Die, Xword),
     thread_create_in_pool(Pool, Goal, _, []),
 
-    % Repeatedly pull solutions from the return channel. Once per second, check
+    % Repeatedly pull solutions from the return channel. Periodically check
     % that worker threads are still running. If not, then no solution exists.
     repeat,
-    (thread_pool_property(Pool, running(0)) ->
-        !, fail
-    ;
-        thread_get_message(Ret, Xword, [timeout(1)])
-    ).
+    ( thread_pool_property(Pool, running(0)) -> !, fail
+    ; thread_get_message(Ret, Xword, [timeout(1)])).
 
 
 %% label_crossword__worker(+Vars, +Pool, +Ret, +Die, ?Xord)
@@ -426,19 +408,16 @@ label_crossword__call(Xword, Pool, Ret, Die) :-
 %     Die (channel): The channel to signal that the workers should die.
 %     Xword (binary matrix): The crossword grid to label.
 label_crossword__worker(_, _, _, Die, _) :-
-    % Check if the thread can die. Otherwise backtrack.
-    thread_peek_message(Die, _),
-    thread_exit(killed).
+    % Check if the thread should die.
+    thread_peek_message(Die, _).
 
 label_crossword__worker([], _, Ret, Die, XW) :-
     % We successfully labeled all of the cells. Pass the solution on the return
     % channel, then backtrack for more solutions. Sending will block if Ret is
     % full. To avoid deadlock, we periodically check the Die channel.
     repeat,
-    (thread_peek_message(Die, _) -> thread_exit(killed) ; true),
-    thread_send_message(Ret, XW, [timeout(1)]),
-    !,
-    fail.
+    ( thread_peek_message(Die, _) -> !
+    ; thread_send_message(Ret, XW, [timeout(1)]) -> !, fail).
 
 label_crossword__worker([X|Vars], Pool, Ret, Die, XW) :-
     % Determine if we want to fork a new thread.
