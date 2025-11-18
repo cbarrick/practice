@@ -1,0 +1,8 @@
+[package]
+name = "p45"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "p45"
+path = "main.rs"
